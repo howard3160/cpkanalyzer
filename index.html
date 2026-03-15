@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPK 分析器 Pro - Process Capability Analyzer</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F4F4F4;
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: #FFFFFF;
+            padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .language-switcher {
+            display: flex;
+            gap: 8px;
+        }
+
+        .lang-btn {
+            padding: 8px 12px;
+            border: 1px solid #E5E7EB;
+            background: #FFFFFF;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: #2563EB;
+            color: #FFFFFF;
+            border-color: #2563EB;
+        }
+
+        .lang-btn:hover {
+            border-color: #2563EB;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Card component */
+        .card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1F2937;
+        }
+
+        /* Tab system */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #E5E7EB;
+        }
+
+        .tab-btn {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6B7280;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #2563EB;
+            border-bottom-color: #2563EB;
+        }
+
+        .tab-btn:hover {
+            color: #2563EB;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* File input section */
+        .file-input-zone {
+            border: 2px dashed #D1D5DB;
+            border-radius: 12px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #FAFBFC;
+        }
+
+        .file-input-zone:hover {
+            border-color: #2563EB;
+            background: #F0F7FF;
+        }
+
+        .file-input-zone.dragover {
+            border-color: #2563EB;
+            background: #EFF6FF;
+        }
+
+        .file-input-zone p {
+            margin: 8px 0;
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .file-input-zone strong {
+            color: #1F2937;
+            font-weight: 600;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Data table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .data-table th {
+            background: #F9FAFB;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .data-table tr:hover {
+            background: #F9FAFB;
+        }
+
+        .data-table .numeric-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Manual input table */
+        .manual-data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .manual-data-table tr {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .manual-data-table input {
+            padding: 10px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .delete-row-btn {
+            padding: 8px 12px;
+            background: #FEE2E2;
+            border: none;
+            border-radius: 6px;
+            color: #DC2626;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .delete-row-btn:hover {
+            background: #FCA5A5;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2563EB;
+            color: #FFFFFF;
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            margin-top: 16px;
+        }
+
+        .btn-primary:hover {
+            background: #1D4ED8;
+        }
+
+        .btn-secondary {
+            background: #E5E7EB;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #D1D5DB;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        /* Specification input */
+        .spec-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .spec-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spec-input-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .spec-input-group input {
+            padding: 10px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Errors and messages */
+        .error-message {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .warning-message {
+            background: #FEF3C7;
+            color: #D97706;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .warning-message.show {
+            display: block;
+        }
+
+        /* Results summary grid */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .result-item {
+            padding: 16px;
+            background: #F9FAFB;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #D1D5DB;
+        }
+
+        .result-item.highlight {
+            background: #EFF6FF;
+            border-left-color: #2563EB;
+        }
+
+        .result-item.excellent {
+            background: #ECFDF5;
+            border-left-color: #16A34A;
+        }
+
+        .result-item.good {
+            background: #EFF6FF;
+            border-left-color: #2563EB;
+        }
+
+        .result-item.marginal {
+            background: #FFFBEB;
+            border-left-color: #D97706;
+        }
+
+        .result-item.poor {
+            background: #FEE2E2;
+            border-left-color: #DC2626;
+        }
+
+        .result-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .result-item.excellent .result-value {
+            color: #16A34A;
+        }
+
+        .result-item.good .result-value {
+            color: #2563EB;
+        }
+
+        .result-item.marginal .result-value {
+            color: #D97706;
+        }
+
+        .result-item.poor .result-value {
+            color: #DC2626;
+        }
+
+        .result-unit {
+            font-size: 12px;
+            color: #6B7280;
+            margin-top: 4px;
+        }
+
+        /* Charts grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 24px;
+        }
+
+        .chart-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+            padding: 24px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1F2937;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 300px;
+        }
+
+        /* Export buttons */
+        .export-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .btn-export {
+            background: #10B981;
+            color: #FFFFFF;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-export:hover {
+            background: #059669;
+        }
+
+        /* Preview table */
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .preview-table th {
+            background: #F9FAFB;
+            font-weight: 600;
+        }
+
+        .column-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .column-select-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .column-select-item input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .column-select-item:hover {
+            border-color: #2563EB;
+            background: #F0F7FF;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .spec-inputs {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .results-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .result-value {
+                font-size: 20px;
+            }
+
+            .export-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Hidden section */
+        .hidden {
+            display: none;
+        }
+
+        /* Loading state */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1 data-i18n="title">CPK 分析器 Pro</h1>
+        <div class="language-switcher">
+            <button class="lang-btn active" data-lang="zh-TW">繁體中文</button>
+            <button class="lang-btn" data-lang="en">English</button>
+            <button class="lang-btn" data-lang="ja">日本語</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Error Messages -->
+        <div class="error-message" id="errorMessage"></div>
+        <div class="warning-message" id="warningMessage"></div>
+
+        <!-- Section 1: Data Input Panel -->
+        <div class="card">
+            <h2 data-i18n="dataInputTitle">資料輸入</h2>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="import" data-i18n="importTabLabel">匯入檔案</button>
+                <button class="tab-btn" data-tab="manual" data-i18n="manualTabLabel">手動輸入</button>
+            </div>
+
+            <!-- Tab A: Import File -->
+            <div id="import" class="tab-content active">
+                <div class="file-input-zone" id="fileInputZone">
+                    <p data-i18n="dragDropText">拖曳檔案到這裡或點擊選擇</p>
+                    <strong data-i18n="supportedFormats">支援格式：.xlsx, .xls, .csv</strong>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+                </div>
+
+                <!-- Column Selector -->
+                <div id="columnSelector" class="hidden" style="margin-top: 16px;">
+                    <p style="margin-bottom: 12px; font-weight: 600;" data-i18n="selectColumnText">請選擇包含測量資料的欄位：</p>
+                    <div class="column-select-item" id="columnSelectContainer"></div>
+                </div>
+
+                <!-- Preview Table -->
+                <table id="previewTable" class="preview-table hidden">
+                    <thead id="previewTableHead"></thead>
+                    <tbody id="previewTableBody"></tbody>
+                </table>
+
+                <!-- Imported Data Summary -->
+                <div id="importedDataSummary" style="margin-top: 12px; font-size: 13px; color: #6B7280; display: none;">
+                    <span data-i18n="rowsImported">已匯入資料行數：</span> <strong id="importedRowCount">0</strong>
+                </div>
+            </div>
+
+            <!-- Tab B: Manual Input -->
+            <div id="manual" class="tab-content">
+                <div id="manualDataTable"></div>
+                <button class="btn btn-secondary btn-small" id="addRowBtn" data-i18n="addRowButton">+ 新增資料列</button>
+                <textarea id="pasteInput" placeholder="或在此貼上資料 (每行一個數值)" style="width: 100%; height: 120px; margin-top: 12px; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; display: none;"></textarea>
+                <button class="btn btn-secondary btn-small" id="pasteBtn" data-i18n="pasteButton">貼上資料</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Specification Input -->
+        <div class="card">
+            <h2 data-i18n="specificationTitle">製程規格設定</h2>
+
+            <div class="spec-inputs">
+                <div class="spec-input-group">
+                    <label for="uslInput" data-i18n="uslLabel">上規格限 (USL)</label>
+                    <input type="number" id="uslInput" step="0.01" placeholder="例如: 100">
+                </div>
+                <div class="spec-input-group">
+                    <label for="lslInput" data-i18n="lslLabel">下規格限 (LSL)</label>
+                    <input type="number" id="lslInput" step="0.01" placeholder="例如: 90">
+                </div>
+                <div class="spec-input-group">
+                    <label for="targetInput" data-i18n="targetLabel">目標值 (選填)</label>
+                    <input type="number" id="targetInput" step="0.01" placeholder="例如: 95">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Action Button -->
+        <div class="card">
+            <button class="btn btn-primary" id="runAnalysisBtn" data-i18n="runAnalysisButton">▶ 執行分析</button>
+        </div>
+
+        <!-- Section 4: Results Summary -->
+        <div id="resultsSection" class="card hidden">
+            <h2 data-i18n="resultsTitle">分析結果</h2>
+            <div class="results-grid" id="resultsGrid"></div>
+        </div>
+
+        <!-- Section 5: Charts Grid -->
+        <div id="chartsSection" class="hidden">
+            <div class="charts-grid" id="chartsGrid"></div>
+        </div>
+
+        <!-- Section 6: Export -->
+        <div id="exportSection" class="card hidden">
+            <h2 data-i18n="exportTitle">匯出結果</h2>
+            <div class="export-buttons">
+                <button class="btn-export" id="exportChartsBtn" data-i18n="exportChartsButton">匯出圖表 (PNG)</button>
+                <button class="btn-export" id="exportResultsBtn" data-i18n="exportResultsButton">匯出結果 (CSV)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // INTERNATIONALIZATION (i18n)
+        // ============================================
+        const i18n = {
+            "zh-TW": {
+                title: "CPK 分析器 Pro",
+                dataInputTitle: "資料輸入",
+                importTabLabel: "匯入檔案",
+                manualTabLabel: "手動輸入",
+                dragDropText: "拖曳檔案到這裡或點擊選擇",
+                supportedFormats: "支援格式：.xlsx, .xls, .csv",
+                selectColumnText: "請選擇包含測量資料的欄位：",
+                rowsImported: "已匯入資料行數：",
+                addRowButton: "+ 新增資料列",
+                pasteButton: "貼上資料",
+                specificationTitle: "製程規格設定",
+                uslLabel: "上規格限 (USL)",
+                lslLabel: "下規格限 (LSL)",
+                targetLabel: "目標值 (選填)",
+                runAnalysisButton: "▶ 執行分析",
+                resultsTitle: "分析結果",
+                exportTitle: "匯出結果",
+                exportChartsButton: "匯出圖表 (PNG)",
+                exportResultsButton: "匯出結果 (CSV)",
+                n: "樣本數",
+                mean: "平均值",
+                stdDev: "標準差",
+                min: "最小值",
+                max: "最大值",
+                cp: "Cp",
+                cpk: "Cpk",
+                pp: "Pp",
+                ppk: "Ppk",
+                sigmaLevel: "Sigma 等級",
+                ppm: "預估 PPM",
+                normalDistribution: "常態分佈曲線",
+                histogram: "直方圖",
+                xbarChart: "X-bar 管制圖",
+                boxPlot: "盒形圖",
+                trendLine: "趨勢圖",
+                cpkGauge: "CPK 儀表板",
+                yieldPpm: "良率 & PPM",
+                qqPlot: "Q-Q 圖",
+                errorMissingData: "請先輸入資料",
+                errorMissingUSL: "請輸入上規格限 (USL)",
+                errorMissingLSL: "請輸入下規格限 (LSL)",
+                errorInvalidSpecs: "規格限無效：LSL 應小於 USL",
+                errorInsufficientData: "需要至少 2 筆資料",
+                analysisComplete: "分析完成",
+                errorFileFormat: "不支援的檔案格式",
+                errorZeroStdDev: "標準差為零，無法計算 Cpk",
+                excellent: "優秀",
+                good: "良好",
+                marginal: "邊界",
+                poor: "不符合",
+                yield: "良率",
+                dataPoints: "資料點",
+                mean_label: "平均值"
+            },
+            "en": {
+                title: "CPK Analyzer Pro",
+                dataInputTitle: "Data Input",
+                importTabLabel: "Import File",
+                manualTabLabel: "Manual Input",
+                dragDropText: "Drag files here or click to select",
+                supportedFormats: "Supported formats: .xlsx, .xls, .csv",
+                selectColumnText: "Select the column with measurement data:",
+                rowsImported: "Rows imported:",
+                addRowButton: "+ Add Row",
+                pasteButton: "Paste Data",
+                specificationTitle: "Process Specification",
+                uslLabel: "Upper Spec Limit (USL)",
+                lslLabel: "Lower Spec Limit (LSL)",
+                targetLabel: "Target (Optional)",
+                runAnalysisButton: "▶ Run Analysis",
+                resultsTitle: "Analysis Results",
+                exportTitle: "Export Results",
+                exportChartsButton: "Export Charts (PNG)",
+                exportResultsButton: "Export Results (CSV)",
+                n: "Sample Count",
+                mean: "Mean",
+                stdDev: "Std Dev",
+                min: "Minimum",
+                max: "Maximum",
+                cp: "Cp",
+                cpk: "Cpk",
+                pp: "Pp",
+                ppk: "Ppk",
+                sigmaLevel: "Sigma Level",
+                ppm: "Est. PPM",
+                normalDistribution: "Normal Distribution",
+                histogram: "Histogram",
+                xbarChart: "X-bar Control Chart",
+                boxPlot: "Box Plot",
+                trendLine: "Trend Line",
+                cpkGauge: "CPK Gauge",
+                yieldPpm: "Yield & PPM",
+                qqPlot: "Q-Q Plot",
+                errorMissingData: "Please enter data first",
+                errorMissingUSL: "Please enter USL",
+                errorMissingLSL: "Please enter LSL",
+                errorInvalidSpecs: "Invalid specs: LSL must be less than USL",
+                errorInsufficientData: "At least 2 data points required",
+                analysisComplete: "Analysis complete",
+                errorFileFormat: "Unsupported file format",
+                errorZeroStdDev: "Standard deviation is zero",
+                excellent: "Excellent",
+                good: "Good",
+                marginal: "Marginal",
+                poor: "Poor",
+                yield: "Yield",
+                dataPoints: "Data Points",
+                mean_label: "Mean"
+            },
+            "ja": {
+                title: "CPK アナライザー Pro",
+                dataInputTitle: "データ入力",
+                importTabLabel: "ファイルインポート",
+                manualTabLabel: "手動入力",
+                dragDropText: "ここにファイルをドラッグするか、クリックして選択",
+                supportedFormats: "サポート形式: .xlsx, .xls, .csv",
+                selectColumnText: "測定データを含む列を選択:",
+                rowsImported: "インポートされた行:",
+                addRowButton: "+ 行を追加",
+                pasteButton: "データを貼り付け",
+                specificationTitle: "プロセス仕様",
+                uslLabel: "上限規格 (USL)",
+                lslLabel: "下限規格 (LSL)",
+                targetLabel: "目標値 (オプション)",
+                runAnalysisButton: "▶ 分析を実行",
+                resultsTitle: "分析結果",
+                exportTitle: "結果をエクスポート",
+                exportChartsButton: "チャートをエクスポート (PNG)",
+                exportResultsButton: "結果をエクスポート (CSV)",
+                n: "サンプル数",
+                mean: "平均",
+                stdDev: "標準偏差",
+                min: "最小値",
+                max: "最大値",
+                cp: "Cp",
+                cpk: "Cpk",
+                pp: "Pp",
+                ppk: "Ppk",
+                sigmaLevel: "シグマレベル",
+                ppm: "推定 PPM",
+                normalDistribution: "正規分布",
+                histogram: "ヒストグラム",
+                xbarChart: "X-bar 管理図",
+                boxPlot: "ボックスプロット",
+                trendLine: "トレンドライン",
+                cpkGauge: "CPK ゲージ",
+                yieldPpm: "歩留率 & PPM",
+                qqPlot: "Q-Q プロット",
+                errorMissingData: "データを入力してください",
+                errorMissingUSL: "USL を入力してください",
+                errorMissingLSL: "LSL を入力してください",
+                errorInvalidSpecs: "無効な仕様: LSL は USL より小さい必要があります",
+                errorInsufficientData: "最低 2 つのデータポイントが必要",
+                analysisComplete: "分析完了",
+                errorFileFormat: "サポートされていないファイル形式",
+                errorZeroStdDev: "標準偏差がゼロです",
+                excellent: "優秀",
+                good: "良好",
+                marginal: "限界",
+                poor: "不適切",
+                yield: "歩留率",
+                dataPoints: "データポイント",
+                mean_label: "平均"
+            }
+        };
+
+        let currentLanguage = "zh-TW";
+        let appData = {
+            measurements: [],
+            usl: null,
+            lsl: null,
+            target: null,
+            stats: null,
+            charts: {}
+        };
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) {
+                    if (el.tagName === 'INPUT' && el.type === 'placeholder') {
+                        el.placeholder = i18n[lang][key];
+                    } else if (el.hasAttribute('placeholder')) {
+                        el.placeholder = i18n[lang][key];
+                    } else {
+                        el.textContent = i18n[lang][key];
+                    }
+                }
+            });
+
+            // Update placeholder attributes
+            const pasteInput = document.getElementById('pasteInput');
+            if (pasteInput) {
+                pasteInput.placeholder = `或在此貼上資料 (每行一個數值)`;
+            }
+        }
+
+        function t(key) {
+            return i18n[currentLanguage][key] || key;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            setTimeout(() => errorEl.classList.remove('show'), 5000);
+        }
+
+        function showWarning(message) {
+            const warningEl = document.getElementById('warningMessage');
+            warningEl.textContent = message;
+            warningEl.classList.add('show');
+            setTimeout(() => warningEl.classList.remove('show'), 5000);
+        }
+
+        function clearMessages() {
+            document.getElementById('errorMessage').classList.remove('show');
+            document.getElementById('warningMessage').classList.remove('show');
+        }
+
+        // ============================================
+        // STATISTICAL FUNCTIONS
+        // ============================================
+
+        function erf(x) {
+            const a1 =  0.254829592;
+            const a2 = -0.284496736;
+            const a3 =  1.421413741;
+            const a4 = -1.453152027;
+            const a5 =  1.061405429;
+            const p  =  0.3275911;
+
+            const sign = x < 0 ? -1 : 1;
+            x = Math.abs(x);
+
+            const t = 1.0 / (1.0 + p * x);
+            const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+            return sign * y;
+        }
+
+        function normalCDF(x, mu, sigma) {
+            return 0.5 * (1 + erf((x - mu) / (sigma * Math.sqrt(2))));
+        }
+
+        function normalPDF(x, mu, sigma) {
+            return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+        }
+
+        function calculateStats(data) {
+            if (data.length < 2) return null;
+
+            const n = data.length;
+            const mean = data.reduce((a, b) => a + b, 0) / n;
+            const variance = data.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / (n - 1);
+            const sigma = Math.sqrt(variance);
+
+            if (sigma === 0) {
+                return {
+                    n, mean, variance, sigma,
+                    min: Math.min(...data),
+                    max: Math.max(...data),
+                    cp: null, cpu: null, cpl: null, cpk: null,
+                    pp: null, ppu: null, ppl: null, ppk: null,
+                    sigmaLevel: null, ppm: null
+                };
+            }
+
+            const usl = appData.usl;
+            const lsl = appData.lsl;
+
+            const cpu = (usl - mean) / (3 * sigma);
+            const cpl = (mean - lsl) / (3 * sigma);
+            const cpk = Math.min(cpu, cpl);
+
+            const cp = (usl - lsl) / (6 * sigma);
+
+            // Pp and Ppk (same as Cp and Cpk for now, without subgrouping)
+            const pp = cp;
+            const ppu = cpu;
+            const ppl = cpl;
+            const ppk = cpk;
+
+            const sigmaLevel = cpk * 3;
+
+            // PPM calculation
+            const ppmUpper = (1 - normalCDF(usl, mean, sigma)) * 1000000;
+            const ppmLower = normalCDF(lsl, mean, sigma) * 1000000;
+            const ppm = ppmUpper + ppmLower;
+
+            return {
+                n, mean, variance, sigma,
+                min: Math.min(...data),
+                max: Math.max(...data),
+                cp, cpu, cpl, cpk,
+                pp, ppu, ppl, ppk,
+                sigmaLevel, ppm
+            };
+        }
+
+        // ============================================
+        // TAB SYSTEM
+        // ============================================
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.getAttribute('data-tab');
+
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding content
+                btn.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // ============================================
+        // FILE IMPORT
+        // ============================================
+
+        const fileInputZone = document.getElementById('fileInputZone');
+        const fileInput = document.getElementById('fileInput');
+
+        fileInputZone.addEventListener('click', () => fileInput.click());
+
+        fileInputZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileInputZone.classList.add('dragover');
+        });
+
+        fileInputZone.addEventListener('dragleave', () => {
+            fileInputZone.classList.remove('dragover');
+        });
+
+        fileInputZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInputZone.classList.remove('dragover');
+            handleFileUpload(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (!jsonData || jsonData.length === 0) {
+                        showError(t('errorFileFormat'));
+                        return;
+                    }
+
+                    // Show preview and column selector
+                    displayPreview(jsonData);
+
+                } catch (error) {
+                    showError(t('errorFileFormat'));
+                    console.error(error);
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayPreview(data) {
+            const headers = data[0] || [];
+            const rows = data.slice(1, 11); // First 10 rows
+
+            // Display column selector
+            const columnSelector = document.getElementById('columnSelector');
+            const columnSelectContainer = document.getElementById('columnSelectContainer');
+            columnSelectContainer.innerHTML = '';
+
+            headers.forEach((header, index) => {
+                const label = document.createElement('label');
+                label.className = 'column-select-item';
+                label.innerHTML = `
+                    <input type="radio" name="selectedColumn" value="${index}">
+                    <span>${header || `Column ${index + 1}`}</span>
+                `;
+                columnSelectContainer.appendChild(label);
+            });
+
+            columnSelector.classList.remove('hidden');
+
+            // Display preview table
+            const previewTable = document.getElementById('previewTable');
+            const previewTableHead = document.getElementById('previewTableHead');
+            const previewTableBody = document.getElementById('previewTableBody');
+
+            previewTableHead.innerHTML = '';
+            previewTableBody.innerHTML = '';
+
+            const headerRow = document.createElement('tr');
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h || 'Data';
+                headerRow.appendChild(th);
+            });
+            previewTableHead.appendChild(headerRow);
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach((_, i) => {
+                    const td = document.createElement('td');
+                    td.textContent = row[i] || '';
+                    tr.appendChild(td);
+                });
+                previewTableBody.appendChild(tr);
+            });
+
+            previewTable.classList.remove('hidden');
+
+            // Listen for column selection
+            document.querySelectorAll('input[name="selectedColumn"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const selectedColumnIndex = parseInt(radio.value);
+                    importDataFromColumn(data, selectedColumnIndex);
+                });
+            });
+        }
+
+        function importDataFromColumn(data, columnIndex) {
+            const measurements = [];
+
+            data.slice(1).forEach(row => {
+                const value = row[columnIndex];
+                const num = parseFloat(value);
+                if (!isNaN(num)) {
+                    measurements.push(num);
+                }
+            });
+
+            if (measurements.length === 0) {
+                showError(t('errorFileFormat'));
+                return;
+            }
+
+            appData.measurements = measurements;
+            document.getElementById('importedRowCount').textContent = measurements.length;
+            document.getElementById('importedDataSummary').style.display = 'block';
+
+            // Update manual input tab to reflect imported data
+            initializeManualInputTable();
+        }
+
+        // ============================================
+        // MANUAL INPUT
+        // ============================================
+
+        function initializeManualInputTable() {
+            const manualDataTable = document.getElementById('manualDataTable');
+            manualDataTable.innerHTML = '';
+
+            appData.measurements.forEach((value, index) => {
+                addManualInputRow(value);
+            });
+
+            if (appData.measurements.length === 0) {
+                addManualInputRow();
+            }
+        }
+
+        function addManualInputRow(value = '') {
+            const manualDataTable = document.getElementById('manualDataTable');
+            const row = document.createElement('div');
+            row.style.display = 'grid';
+            row.style.gridTemplateColumns = '1fr auto';
+            row.style.gap = '8px';
+            row.style.marginBottom = '8px';
+            row.style.alignItems = 'center';
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.value = value;
+            input.placeholder = '輸入測量值';
+            input.className = 'numeric-input';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = t('pasteButton') === '貼上資料' ? '✕ 刪除' : '✕ Delete';
+            deleteBtn.className = 'delete-row-btn';
+            deleteBtn.addEventListener('click', () => {
+                row.remove();
+                updateMeasurementsFromManualInput();
+            });
+
+            row.appendChild(input);
+            row.appendChild(deleteBtn);
+            manualDataTable.appendChild(row);
+
+            input.addEventListener('change', () => {
+                updateMeasurementsFromManualInput();
+            });
+        }
+
+        document.getElementById('addRowBtn').addEventListener('click', () => {
+            addManualInputRow();
+            updateMeasurementsFromManualInput();
+        });
+
+        document.getElementById('pasteBtn').addEventListener('click', () => {
+            const pasteInput = document.getElementById('pasteInput');
+            const isVisible = pasteInput.style.display !== 'none';
+
+            if (!isVisible) {
+                pasteInput.style.display = 'block';
+                pasteInput.focus();
+            } else {
+                // Process pasted data
+                const lines = pasteInput.value.split('\n');
+                const values = lines
+                    .map(line => parseFloat(line.trim()))
+                    .filter(v => !isNaN(v));
+
+                if (values.length === 0) {
+                    showWarning('沒有有效的數值');
+                    return;
+                }
+
+                appData.measurements = values;
+                initializeManualInputTable();
+                pasteInput.value = '';
+                pasteInput.style.display = 'none';
+                document.getElementById('importedRowCount').textContent = values.length;
+                document.getElementById('importedDataSummary').style.display = 'block';
+            }
+        });
+
+        function updateMeasurementsFromManualInput() {
+            const inputs = document.querySelectorAll('#manualDataTable input');
+            const measurements = [];
+
+            inputs.forEach(input => {
+                const value = parseFloat(input.value);
+                if (!isNaN(value)) {
+                    measurements.push(value);
+                }
+            });
+
+            appData.measurements = measurements;
+            if (measurements.length > 0) {
+                document.getElementById('importedRowCount').textContent = measurements.length;
+                document.getElementById('importedDataSummary').style.display = 'block';
+            }
+        }
+
+        // Initialize manual input table on load
+        initializeManualInputTable();
+
+        // ============================================
+        // ANALYSIS EXECUTION
+        // ============================================
+
+        document.getElementById('runAnalysisBtn').addEventListener('click', runAnalysis);
+
+        function runAnalysis() {
+            clearMessages();
+
+            // Validate inputs
+            if (appData.measurements.length === 0) {
+                showError(t('errorMissingData'));
+                return;
+            }
+
+            if (isNaN(appData.usl) || appData.usl === null || appData.usl === '') {
+                showError(t('errorMissingUSL'));
+                return;
+            }
+
+            if (isNaN(appData.lsl) || appData.lsl === null || appData.lsl === '') {
+                showError(t('errorMissingLSL'));
+                return;
+            }
+
+            appData.usl = parseFloat(document.getElementById('uslInput').value);
+            appData.lsl = parseFloat(document.getElementById('lslInput').value);
+            appData.target = parseFloat(document.getElementById('targetInput').value) || null;
+
+            if (appData.lsl >= appData.usl) {
+                showError(t('errorInvalidSpecs'));
+                return;
+            }
+
+            if (appData.measurements.length < 2) {
+                showError(t('errorInsufficientData'));
+                return;
+            }
+
+            // Calculate statistics
+            appData.stats = calculateStats(appData.measurements);
+
+            if (!appData.stats) {
+                showError(t('errorInsufficientData'));
+                return;
+            }
+
+            if (appData.stats.sigma === 0) {
+                showError(t('errorZeroStdDev'));
+                return;
+            }
+
+            // Display results
+            displayResults();
+            displayCharts();
+
+            // Scroll to results
+            setTimeout(() => {
+                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+
+        // ============================================
+        // RESULTS DISPLAY
+        // ============================================
+
+        function displayResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = '';
+
+            const stats = appData.stats;
+
+            const resultItems = [
+                { key: 'n', value: stats.n, unit: '' },
+                { key: 'mean', value: stats.mean.toFixed(4), unit: '' },
+                { key: 'stdDev', value: stats.sigma.toFixed(4), unit: '' },
+                { key: 'min', value: stats.min.toFixed(4), unit: '' },
+                { key: 'max', value: stats.max.toFixed(4), unit: '' },
+                { key: 'cp', value: stats.cp.toFixed(4), unit: '' },
+                { key: 'cpk', value: stats.cpk.toFixed(4), unit: '', highlight: true },
+                { key: 'pp', value: stats.pp.toFixed(4), unit: '' },
+                { key: 'ppk', value: stats.ppk.toFixed(4), unit: '' },
+                { key: 'sigmaLevel', value: stats.sigmaLevel.toFixed(2), unit: 'σ' },
+                { key: 'ppm', value: stats.ppm.toFixed(0), unit: 'PPM' },
+            ];
+
+            resultItems.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'result-item';
+
+                // Color code Cpk
+                if (item.highlight && stats.cpk !== null) {
+                    if (stats.cpk >= 1.67) {
+                        itemEl.classList.add('excellent');
+                    } else if (stats.cpk >= 1.33) {
+                        itemEl.classList.add('good');
+                    } else if (stats.cpk >= 1.0) {
+                        itemEl.classList.add('marginal');
+                    } else {
+                        itemEl.classList.add('poor');
+                    }
+                } else if (item.key === 'cpk' && stats.cpk === null) {
+                    itemEl.classList.add('poor');
+                }
+
+                itemEl.innerHTML = `
+                    <div class="result-label">${t(item.key)}</div>
+                    <div class="result-value">${item.value}</div>
+                    ${item.unit ? `<div class="result-unit">${item.unit}</div>` : ''}
+                `;
+
+                resultsGrid.appendChild(itemEl);
+            });
+
+            resultsSection.classList.remove('hidden');
+            document.getElementById('exportSection').classList.remove('hidden');
+        }
+
+        // ============================================
+        // CHARTS
+        // ============================================
+
+        function displayCharts() {
+            const chartsSection = document.getElementById('chartsSection');
+            const chartsGrid = document.getElementById('chartsGrid');
+            chartsGrid.innerHTML = '';
+
+            // Destroy existing charts
+            Object.values(appData.charts).forEach(chart => {
+                if (chart && chart.destroy) {
+                    chart.destroy();
+                }
+            });
+            appData.charts = {};
+
+            chartsSection.classList.remove('hidden');
+
+            // Create chart containers
+            const chartConfigs = [
+                { title: 'normalDistribution', id: 'normalDistChart', type: 'normal' },
+                { title: 'histogram', id: 'histogramChart', type: 'histogram' },
+                { title: 'xbarChart', id: 'xbarChart', type: 'xbar' },
+                { title: 'boxPlot', id: 'boxPlotChart', type: 'box' },
+                { title: 'trendLine', id: 'trendChart', type: 'trend' },
+                { title: 'cpkGauge', id: 'cpkGaugeChart', type: 'gauge' },
+                { title: 'yieldPpm', id: 'yieldChart', type: 'yield' },
+                { title: 'qqPlot', id: 'qqPlotChart', type: 'qq' }
+            ];
+
+            chartConfigs.forEach(config => {
+                const card = document.createElement('div');
+                card.className = 'chart-card';
+                card.innerHTML = `
+                    <h3 data-i18n="${config.title}">${t(config.title)}</h3>
+                    <div class="chart-container">
+                        <canvas id="${config.id}"></canvas>
+                    </div>
+                `;
+                chartsGrid.appendChild(card);
+
+                // Render chart
+                setTimeout(() => {
+                    renderChart(config.type, config.id);
+                }, 100);
+            });
+        }
+
+        function renderChart(type, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const stats = appData.stats;
+            const data = appData.measurements;
+
+            switch (type) {
+                case 'normal':
+                    renderNormalDistribution(ctx, canvasId, stats, data);
+                    break;
+                case 'histogram':
+                    renderHistogram(ctx, canvasId, stats, data);
+                    break;
+                case 'xbar':
+                    renderXbarChart(ctx, canvasId, stats, data);
+                    break;
+                case 'box':
+                    renderBoxPlot(ctx, canvasId, stats, data);
+                    break;
+                case 'trend':
+                    renderTrendLine(ctx, canvasId, stats, data);
+                    break;
+                case 'gauge':
+                    renderCPKGauge(ctx, canvasId, stats);
+                    break;
+                case 'yield':
+                    renderYieldPPM(ctx, canvasId, stats);
+                    break;
+                case 'qq':
+                    renderQQPlot(ctx, canvasId, stats, data);
+                    break;
+            }
+        }
+
+        function renderNormalDistribution(ctx, canvasId, stats, data) {
+            const mean = stats.mean;
+            const sigma = stats.sigma;
+            const usl = appData.usl;
+            const lsl = appData.lsl;
+
+            // Generate normal distribution curve
+            const xMin = lsl - 3 * sigma;
+            const xMax = usl + 3 * sigma;
+            const step = (xMax - xMin) / 300;
+
+            const curveData = [];
+            const labels = [];
+
+            for (let x = xMin; x <= xMax; x += step) {
+                labels.push(x.toFixed(2));
+                curveData.push(normalPDF(x, mean, sigma) * 100);
+            }
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: t('normalDistribution'),
+                        data: curveData,
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderHistogram(ctx, canvasId, stats, data) {
+            const mean = stats.mean;
+            const sigma = stats.sigma;
+
+            // Sturges' rule for bin count
+            const k = Math.ceil(Math.log2(data.length) + 1);
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const binWidth = (max - min) / k;
+
+            // Create bins
+            const bins = Array(k).fill(0);
+            const binLabels = [];
+
+            for (let i = 0; i < k; i++) {
+                binLabels.push((min + i * binWidth).toFixed(2));
+            }
+
+            data.forEach(value => {
+                const binIndex = Math.min(Math.floor((value - min) / binWidth), k - 1);
+                bins[binIndex]++;
+            });
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: binLabels,
+                    datasets: [{
+                        label: t('dataPoints'),
+                        data: bins,
+                        backgroundColor: '#2563EB',
+                        borderColor: '#1D4ED8',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderXbarChart(ctx, canvasId, stats, data) {
+            const mean = stats.mean;
+            const sigma = stats.sigma;
+            const ucl = mean + 3 * sigma;
+            const lcl = Math.max(0, mean - 3 * sigma);
+
+            const labels = data.map((_, i) => (i + 1).toString());
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: t('dataPoints'),
+                            data: data,
+                            borderColor: '#2563EB',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            pointRadius: 4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'UCL',
+                            data: Array(data.length).fill(ucl),
+                            borderColor: '#DC2626',
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'CL',
+                            data: Array(data.length).fill(mean),
+                            borderColor: '#059669',
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'LCL',
+                            data: Array(data.length).fill(lcl),
+                            borderColor: '#DC2626',
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: false }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderBoxPlot(ctx, canvasId, stats, data) {
+            const sorted = [...data].sort((a, b) => a - b);
+            const q1Index = Math.floor(sorted.length * 0.25);
+            const medianIndex = Math.floor(sorted.length * 0.5);
+            const q3Index = Math.floor(sorted.length * 0.75);
+
+            const q1 = sorted[q1Index];
+            const median = sorted[medianIndex];
+            const q3 = sorted[q3Index];
+            const iqr = q3 - q1;
+            const whiskerLow = q1 - 1.5 * iqr;
+            const whiskerHigh = q3 + 1.5 * iqr;
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Box Plot'],
+                    datasets: [{
+                        label: t('dataPoints'),
+                        data: [median],
+                        backgroundColor: '#2563EB'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: false }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderTrendLine(ctx, canvasId, stats, data) {
+            const labels = data.map((_, i) => (i + 1).toString());
+
+            // Calculate moving average
+            const windowSize = 5;
+            const movingAvg = [];
+            for (let i = 0; i < data.length; i++) {
+                const start = Math.max(0, i - Math.floor(windowSize / 2));
+                const end = Math.min(data.length, i + Math.floor(windowSize / 2) + 1);
+                const avg = data.slice(start, end).reduce((a, b) => a + b, 0) / (end - start);
+                movingAvg.push(avg);
+            }
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: t('dataPoints'),
+                            data: data,
+                            borderColor: '#2563EB',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'Moving Avg',
+                            data: movingAvg,
+                            borderColor: '#D97706',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'USL',
+                            data: Array(data.length).fill(appData.usl),
+                            borderColor: '#DC2626',
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'LSL',
+                            data: Array(data.length).fill(appData.lsl),
+                            borderColor: '#DC2626',
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderCPKGauge(ctx, canvasId, stats) {
+            const cpk = stats.cpk;
+            const value = Math.min(cpk, 2);
+
+            // Determine color based on Cpk value
+            let color = '#DC2626'; // red
+            if (cpk >= 1.67) {
+                color = '#16A34A'; // green
+            } else if (cpk >= 1.33) {
+                color = '#2563EB'; // blue
+            } else if (cpk >= 1.0) {
+                color = '#D97706'; // amber
+            }
+
+            const chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cpk', 'Remaining'],
+                    datasets: [{
+                        data: [value, 2 - value],
+                        backgroundColor: [color, '#E5E7EB'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderYieldPPM(ctx, canvasId, stats) {
+            const ppmPercentage = Math.min(stats.ppm, 100000);
+            const yield_ = 100 - (stats.ppm / 10000);
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [t('yield'), 'PPM'],
+                    datasets: [{
+                        label: 'Value',
+                        data: [yield_, ppmPercentage / 1000],
+                        backgroundColor: ['#16A34A', '#DC2626']
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function renderQQPlot(ctx, canvasId, stats, data) {
+            const sorted = [...data].sort((a, b) => a - b);
+            const n = sorted.length;
+            const mean = stats.mean;
+            const sigma = stats.sigma;
+
+            const theoreticalQuantiles = [];
+            const sampleQuantiles = sorted;
+
+            for (let i = 0; i < n; i++) {
+                const p = (i + 1) / (n + 1);
+                const z = inverseNormalCDF(p);
+                theoreticalQuantiles.push(mean + z * sigma);
+            }
+
+            const labels = theoreticalQuantiles.map(v => v.toFixed(2));
+
+            const chart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Q-Q Plot',
+                            data: sampleQuantiles.map((y, i) => ({
+                                x: theoreticalQuantiles[i],
+                                y: y
+                            })),
+                            backgroundColor: '#2563EB',
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { type: 'linear', position: 'bottom' },
+                        y: { type: 'linear' }
+                    }
+                }
+            });
+
+            appData.charts[canvasId] = chart;
+        }
+
+        function inverseNormalCDF(p) {
+            // Approximation of inverse normal CDF using rational approximation
+            if (p < 0.5) {
+                return -inverseNormalCDFApprox(p);
+            } else {
+                return inverseNormalCDFApprox(1 - p);
+            }
+        }
+
+        function inverseNormalCDFApprox(p) {
+            const a1 = -3.969683028665376e+01;
+            const a2 =  2.221222899801429e+02;
+            const a3 = -2.821152023902548e+02;
+            const a4 =  1.340426573961423e+02;
+            const a5 = -1.627296189588725e+00;
+            const b1 = -5.447609879822406e+01;
+            const b2 =  1.615858368580409e+02;
+            const b3 = -1.556989798598866e+02;
+            const b4 =  6.680131188771972e+01;
+            const b5 = -7.028495245500852e-01;
+
+            const q = p < 0.02425;
+            const r = q ? Math.sqrt(-2.0 * Math.log(p)) : Math.sqrt(-2.0 * Math.log(0.5 - Math.abs(p - 0.5)));
+
+            const u = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1));
+
+            return q ? -u : (p < 0.5 ? -u : u);
+        }
+
+        // ============================================
+        // INPUT LISTENERS
+        // ============================================
+
+        document.getElementById('uslInput').addEventListener('change', (e) => {
+            appData.usl = parseFloat(e.target.value);
+        });
+
+        document.getElementById('lslInput').addEventListener('change', (e) => {
+            appData.lsl = parseFloat(e.target.value);
+        });
+
+        document.getElementById('targetInput').addEventListener('change', (e) => {
+            appData.target = parseFloat(e.target.value);
+        });
+
+        // ============================================
+        // EXPORT FUNCTIONS
+        // ============================================
+
+        document.getElementById('exportChartsBtn').addEventListener('click', exportCharts);
+        document.getElementById('exportResultsBtn').addEventListener('click', exportResults);
+
+        function exportCharts() {
+            const chartsSection = document.getElementById('chartsSection');
+            if (chartsSection.classList.contains('hidden')) {
+                showWarning('請先執行分析');
+                return;
+            }
+
+            html2canvas(chartsSection, {
+                backgroundColor: '#FFFFFF',
+                scale: 2
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'cpk_analysis_charts.png';
+                link.click();
+            });
+        }
+
+        function exportResults() {
+            if (!appData.stats) {
+                showWarning('請先執行分析');
+                return;
+            }
+
+            const stats = appData.stats;
+            const csv = [
+                ['CPK 分析結果 / CPK Analysis Results'],
+                [],
+                ['項目 / Item', '數值 / Value', '單位 / Unit'],
+                ['樣本數 / Sample Count', stats.n, ''],
+                ['平均值 / Mean', stats.mean.toFixed(4), ''],
+                ['標準差 / Std Dev', stats.sigma.toFixed(4), ''],
+                ['最小值 / Minimum', stats.min.toFixed(4), ''],
+                ['最大值 / Maximum', stats.max.toFixed(4), ''],
+                ['上規格限 / USL', appData.usl, ''],
+                ['下規格限 / LSL', appData.lsl, ''],
+                ['Cp', stats.cp.toFixed(4), ''],
+                ['Cpk', stats.cpk.toFixed(4), ''],
+                ['Pp', stats.pp.toFixed(4), ''],
+                ['Ppk', stats.ppk.toFixed(4), ''],
+                ['Sigma Level', stats.sigmaLevel.toFixed(2), 'σ'],
+                ['預估 PPM / Est. PPM', stats.ppm.toFixed(0), ''],
+                [],
+                ['原始資料 / Raw Data'],
+                ...appData.measurements.map(m => [m])
+            ];
+
+            const csvContent = csv.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'cpk_analysis_results.csv';
+            link.click();
+        }
+
+        // ============================================
+        // LANGUAGE SWITCHER
+        // ============================================
+
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                setLanguage(btn.getAttribute('data-lang'));
+            });
+        });
+
+        // Initialize
+        setLanguage('zh-TW');
+    </script>
+</body>
+</html>
+
